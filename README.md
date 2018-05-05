@@ -1,4 +1,4 @@
-# Write-up
+# Deep Learning Project 
 ## The network architecture for segmentation.
 
 The networks has `encoding part` and `decoding part`. The encoding blocks in the network are similar to them in the classifier network and perform feature extractions. 
@@ -18,8 +18,10 @@ The decoding blocks perform `upsampling` for the result images with the same siz
 def decoder_block(small_ip_layer, large_ip_layer, filters):
     # DONE Upsample the small input layer using the bilinear_upsample() function.
     upsampled = bilinear_upsample(small_ip_layer)
+
     # DONE Concatenate the upsampled and large input layers using layers.concatenate
     concated = layers.concatenate([upsampled, large_ip_layer])
+
     # DONE Add some number of separable convolution layers
     output_layer = separable_conv2d_batchnorm(concated, filters, strides=1)
     return output_layer
@@ -67,8 +69,10 @@ The model is `model_weigts` h5 file in `data/weights` directory.
 This neural network obtains an accuracy greater than or equal to 40% (0.40) using the Intersection over Union (IoU) metric.
 
 ## Future Enhancements
-I could get over 40% accuracy using only the given dataset. To get a better accuracy I will need to gether more training data. It has more room to get a lower loss with more training epoch. Because the graph of training loss is not flattened and validation loss is not increasing, it doesn't suffer overfitting.
-Moreover the network with more layers will be helpful to the accuracy.
+I could get over 40% accuracy using only the given dataset. To get a better accuracy, the following will be helpful.
+* It has more room to get a lower loss with more training epoch. Because the graph of training loss is not flattened and validation loss is not increasing, it doesn't suffer overfitting.
+* I will need to gether more training data. 
+* The network with more layers will get the higher accuracy if data is sufficient.
 
 ---
 
