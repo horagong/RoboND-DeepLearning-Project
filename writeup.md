@@ -1,3 +1,77 @@
+# Write-up
+## The network architecture for segmentation.
+
+The networks has `encoding part` and `decoding part`. The encoding blocks in the network are similar to them in the classifier network and perform feature extractions. 
+```
+def encoder_block(input_layer, filters, strides):
+    # DONE Create a separable convolution layer using the separable_conv2d_batchnorm() function.
+    output_layer = separable_conv2d_batchnorm(input_layer, filters, strides)
+    return output_layer
+```
+Especially this network uses separable_conv2d_batchnorm(). `separable convolution` requires fewer weights than normal convolution and `batchnorm` makes the training faster. 
+
+In this project we want to find the region of the objects in the images so it needs more layers to do that.
+
+The decoding blocks perform `upsampling` for the result images with the same size as input images. I used bilinear upsampling technique that utilizes the weighted average of four nearest known pixels, located diagonally to a given pixel, to estimate a new pixel intensity value. The weighted average is usually distance dependent. The upsampled layer is concatenated with the large input layer through `skip connection` and followed by separable_conv2d_batchnorm.
+
+```
+def decoder_block(small_ip_layer, large_ip_layer, filters):
+    # DONE Upsample the small input layer using the bilinear_upsample() function.
+    upsampled = bilinear_upsample(small_ip_layer)
+    # DONE Concatenate the upsampled and large input layers using layers.concatenate
+    concated = layers.concatenate([upsampled, large_ip_layer])
+    # DONE Add some number of separable convolution layers
+    output_layer = separable_conv2d_batchnorm(concated, filters, strides=1)
+    return output_layer
+```
+
+These encoding block and decoding block are connetected by `1 by 1 convolution`. 1 by 1 convolution preserves the spacial information of the input images while fully connected layer loses the information. 
+
+I used three layers of encoding blocks, one by one conv and three layers of decoding blocks. encode1, encode2 and encode3 layers have the width of inputs/2, inputs/4 and inputs/8 respectivly. So the last layer of decoding block with the same width as of inputs has skip connection from inputs. 
+
+```
+def fcn_model(inputs, num_classes):
+    encode1 = encoder_block(inputs, filters=32, strides=2)
+    encode2 = encoder_block(encode1, filters=64, strides=2)
+    encode3 = encoder_block(encode2, filters=128, strides=2)
+    
+    onebyone = conv2d_batchnorm(encode3, filters=128, kernel_size=1, strides=1)
+        
+    decode1 = decoder_block(onebyone, encode2, filters=128)
+    decode2 = decoder_block(decode1, encode1, filters=64)
+    x = decoder_block(decode2, inputs, filters=32)
+    
+    return layers.Conv2D(num_classes, 1, activation='softmax', padding='same')(x)
+```
+
+I used these hyperparameters for this network.
+
+```
+learning_rate = 0.001
+batch_size = 10
+num_epochs = 50
+steps_per_epoch = 200
+validation_steps = 50
+workers = 2
+```
+I first tried `num_epochs` of 100 but it seemed to take more than a day to finish so I reduced it to the half. `batch_size` of 20 was not possible on my machine and also it should have to be reduced. `learning_rate` of 0.01 was not good so I took the smaller step of 0.001.
+From the above hyperparameters I got the training loss of 0.0124 and val_loss of 0.0232
+![epoch](docs/misc/50.png)
+
+
+The given dataset has three classes, hero, other persons and background. So if the model is used for tracking other objects, it will need masked data for these objects.
+
+## Model
+The model is `model_weigts` h5 file in `data/weights` directory.
+
+This neural network obtains an accuracy greater than or equal to 40% (0.40) using the Intersection over Union (IoU) metric.
+
+## Future Enhancements
+I could get over 40% accuracy using only the given dataset. To get a better accuracy I will need to gether more training data. It has more room to get a lower loss with more training epoch. Because the graph of training loss is not flattened and validation loss is not increasing, it doesn't suffer overfitting.
+Moreover the network with more layers will be helpful to the accuracy.
+
+---
+
 [![Udacity - Robotics NanoDegree Program](https://s3-us-west-1.amazonaws.com/udacity-robotics/Extra+Images/RoboND_flag.png)](https://www.udacity.com/robotics)
 
 ## Deep Learning Project ##
